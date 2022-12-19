@@ -59,7 +59,7 @@ repository
 
 ```
 conda env update --file environment.yml
-conda activate data-science-tools
+conda activate name_of_your_local_data_science_repository
 ```
 
 Finally, open a Python program and/or Jupyter notebook and import the packages `cdtools`

@@ -14,7 +14,19 @@ science project repository, where it can be used for data science analysis.
 [`Visual Studio Code`](https://code.visualstudio.com/).
 2. [`conda`](https://docs.conda.io/projects/conda/en/stable/).
 
-## Installation
+## Installation of this repository for unit testing
+
+Run the following commands from the root folder of this repository
+
+```
+conda env update --file environment.yml
+conda activate data-science-tools
+```
+
+This will create and activate the Python environment *data-science-tools* from which
+all functionalities in this repository can be run and unit tests can be performed.
+
+## Installation of this repository for use in your local data science repository
 
 First, add the data-science-tools repository to the same folder as your local data
 science project repository. For example, if you have the following folder to store

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 
 
-def impute_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def impute_dataframe(df: pd.DataFrame, random_state: int = None) -> pd.DataFrame:
     """
     Impute missing values in a Pandas dataframe.
 
@@ -12,11 +12,14 @@ def impute_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
     Inputs:
     df: pd.DataFrame
-        Pandas dataframe containing missing values.
+        The Pandas dataframe containing missing values.
+    random_state: int, optional
+        The seed for the random number generator that is used for choosing a random
+        value from the non-missing values in a column.
 
     Outputs:
     df_imputed: pd.DataFrame
-        Pandas dataframe with missing values imputed.
+        The Pandas dataframe with missing values imputed.
 
     Example:
     Take a dataframe containing missing values df1 and return a dataframe df2 with all
@@ -59,7 +62,9 @@ def impute_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
                 # Draw a random sample from the non-missing elements in the column.
                 random_sample_non_missing_data = (
-                    df_current_column.dropna().sample(n=1).values[0][0]
+                    df_current_column.dropna()
+                    .sample(n=1, random_state=random_state)
+                    .values[0][0]
                 )
 
                 # Get the row index of the current missing value that needs to be

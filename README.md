@@ -73,12 +73,13 @@ where you replace **name_of_your_local_data_science_repository** with the name
 appropriate for your local data sciene repository and **python_version_number** with the
 python version number you are using in your local data sciene repository.
 
-Third, run the following commands from the root folder of your local data sciene
-repository
+Third, from the root folder of your local data sciene repository
 
 ```
 /home/my_user_name/my_repositories/your_local_data_science_project_repository
 ```
+
+run the following commands:
 
 ```
 conda env update --file environment.yml

@@ -33,19 +33,27 @@ First, add the data-science-tools repository to the same folder as your local da
 science project repository. For example, if you have the following folder to store
 your repositories
 
-```/home/my_user_name/my_repositories/```
+```
+/home/my_user_name/my_repositories/
+```
 
 and your local data science project repository is located in
 
-```/home/my_user_name/my_repositories/your_local_data_science_project_repository```
+```
+/home/my_user_name/my_repositories/your_local_data_science_project_repository
+```
 
 then store the code of the data-science-tools repository in
 
-```/home/my_user_name/my_repositories/data-science-tools```
+```
+/home/my_user_name/my_repositories/data-science-tools
+```
 
 Second, in your local data science project repository
 
-```/home/my_user_name/my_repositories/your_local_data_science_project_repository```
+```
+/home/my_user_name/my_repositories/your_local_data_science_project_repository
+```
 
 create the file environment.yml file and include the following lines of code in it:
 
@@ -68,7 +76,9 @@ python version number you are using in your local data sciene repository.
 Third, run the following commands from the root folder of your local data sciene
 repository
 
-```/home/my_user_name/my_repositories/your_local_data_science_project_repository```
+```
+/home/my_user_name/my_repositories/your_local_data_science_project_repository
+```
 
 ```
 conda env update --file environment.yml

@@ -23,7 +23,7 @@ conda env update --file environment.yml
 conda activate data-science-tools
 ```
 
-This will create and activate the Python environment **data-science-tools** from which
+This will create and activate the Python environment data-science-tools from which
 all functionalities in this repository can be run locally and unit tests can be
 performed.
 
@@ -75,8 +75,8 @@ conda env update --file environment.yml
 conda activate name_of_your_local_data_science_repository
 ```
 
-Finally, open a Python program and/or Jupyter notebook and import the packages
-**cdtools** and/or its sub-packages and modules using the Python commands **import** and
+Finally, open a Python program and/or Jupyter notebook and import the package
+cdtools and/or its sub-packages and modules using the Python commands **import** and
 **from**. For example:
 
 ```

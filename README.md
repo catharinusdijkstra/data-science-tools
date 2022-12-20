@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Welcome to my data-science-tools repository. In this repository, you find the
+Welcome to my **data-science-tools** repository. In this repository, you find the
 **cdtools** package with code useful for data science analysis.
 
 The codebase in this repository is intended to be imported in your personal local data

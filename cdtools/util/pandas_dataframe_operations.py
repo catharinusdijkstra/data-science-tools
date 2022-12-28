@@ -23,10 +23,10 @@ def impute_dataframe(df: pd.DataFrame, random_state: int = None) -> pd.DataFrame
         The Pandas dataframe with missing values imputed.
 
     Example:
-    Take a dataframe containing missing values df1 and return a dataframe df2 with all
-    missing values imputed:
+    Take a dataframe, df, containing missing values and return a dataframe, df_imputed,
+    with all missing values imputed:
 
-        df2 = df_impute(df)
+        df_imputed = impute_dataframe(df)
     """
 
     # Create a copy of the original dataframe.

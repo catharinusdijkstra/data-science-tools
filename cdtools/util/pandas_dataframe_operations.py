@@ -3,6 +3,7 @@ import pandas as pd
 
 
 def impute_dataframe(df: pd.DataFrame, random_state: int = None) -> pd.DataFrame:
+
     """
     Impute missing values in a Pandas dataframe.
 
@@ -27,6 +28,7 @@ def impute_dataframe(df: pd.DataFrame, random_state: int = None) -> pd.DataFrame
 
         df2 = df_impute(df)
     """
+
     # Create a copy of the original dataframe.
     df_imputed = df.copy(deep=True)
 

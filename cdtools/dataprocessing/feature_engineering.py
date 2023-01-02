@@ -78,7 +78,10 @@ def get_feature_lists(
     features_numerical = [
         column
         for (column, column_data_type) in column_data_types.items()
-        if ((column not in keys + labels) and (column_data_type in [int, float]))
+        if (
+            (column not in keys + labels)
+            and (column_data_type in [int, float, complex])
+        )
     ]
 
     features_boolean = [

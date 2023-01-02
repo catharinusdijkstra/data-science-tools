@@ -10,7 +10,8 @@ def test_get_feature_lists():
         "feature_1": str,
         "feature_2": int,
         "feature_3": float,
-        "feature_4": bool,
+        "feature_4": complex,
+        "feature_5": bool,
         "label_1": bool,
         "label_2": float,
     }
@@ -18,10 +19,16 @@ def test_get_feature_lists():
     keys = ["key_1", "key_2"]
     labels = ["label_1", "label_2"]
 
-    features_expected = ["feature_1", "feature_2", "feature_3", "feature_4"]
+    features_expected = [
+        "feature_1",
+        "feature_2",
+        "feature_3",
+        "feature_4",
+        "feature_5",
+    ]
     features_categorical_expected = ["feature_1"]
-    features_numerical_expected = ["feature_2", "feature_3"]
-    features_boolean_expected = ["feature_4"]
+    features_numerical_expected = ["feature_2", "feature_3", "feature_4"]
+    features_boolean_expected = ["feature_5"]
 
     (
         features_actual,

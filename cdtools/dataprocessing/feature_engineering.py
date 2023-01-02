@@ -42,7 +42,8 @@ def get_feature_lists(
             "feature_1": str,
             "feature_2": int,
             "feature_3": float,
-            "feature_4": bool,
+            "feature_4": complex,
+            "feature_5": bool,
             "label_1": bool,
             "label_2": float,
         }
@@ -51,18 +52,24 @@ def get_feature_lists(
         labels = ["label_1", "label_2"]
 
         (
-            features_actual,
-            features_categorical_actual,
-            features_numerical_actual,
-            features_boolean_actual,
+            features,
+            features_categorical,
+            features_numerical,
+            features_boolean,
         ) = get_feature_lists(column_data_types, keys, labels)
 
     The above example generates the following output:
 
-        features_expected = ["feature_1", "feature_2", "feature_3", "feature_4"]
-        features_categorical_expected = ["feature_1"]
-        features_numerical_expected = ["feature_2", "feature_3"]
-        features_boolean_expected = ["feature_4"]
+    features = [
+        "feature_1",
+        "feature_2",
+        "feature_3",
+        "feature_4",
+        "feature_5"
+    ]
+    features_categorical = ["feature_1"]
+    features_numerical = ["feature_2", "feature_3", "feature_4"]
+    features_boolean = ["feature_5"]
     """
 
     features = [

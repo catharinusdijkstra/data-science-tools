@@ -2,6 +2,37 @@ import numpy as np
 import pandas as pd
 
 
+def compare_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
+
+    """
+    Compare two Pandas dataframes and return a Pandas dataframe with their differences.
+
+    Inputs:
+    df1: pd.DataFrame
+        The first Pandas dataframe to compare.
+    df2: pd.DataFrame
+        The second Pandas dataframe to compare.
+
+    Outputs:
+    df_compared: pd.DataFrame
+        A Pandas dataframe with the differences between the two input Pandas dataframes.
+        For each record that is different, first the record from the first Pandas
+        dataframe is shown, followed by the record from the second Pandas dataframe.
+
+    Example:
+    Given two Pandas dataframes, df1 and df2, return a Pandas dataframe df_compared with
+    their differences:
+
+        df_compared = compare_dataframes(df1, df2)
+    """
+
+    df_compared = df1.compare(
+        df2, align_axis=0, keep_shape=True, keep_equal=True
+    ).drop_duplicates(keep=False)
+
+    return df_compared
+
+
 def impute_dataframe(df: pd.DataFrame, random_state: int = None) -> pd.DataFrame:
 
     """

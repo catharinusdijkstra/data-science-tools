@@ -26,9 +26,12 @@ def compare_dataframes(df1: pd.DataFrame, df2: pd.DataFrame) -> pd.DataFrame:
         df_compared = compare_dataframes(df1, df2)
     """
 
-    df_compared = df1.compare(
-        df2, align_axis=0, keep_shape=True, keep_equal=True
-    ).drop_duplicates(keep=False)
+    df_compared = (
+        df1.compare(df2, align_axis=0, keep_shape=True, keep_equal=True)
+        .drop_duplicates(keep=False)
+        .rename(index={"self": "df1", "other": "df2"}, level=1)
+        .swaplevel(axis=0)
+    )
 
     return df_compared
 

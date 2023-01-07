@@ -5,7 +5,7 @@ import pandas as pd
 
 def test_impute_dataframe():
 
-    input_data = [
+    data = [
         ["alice", 20],
         ["alice", 25],
         ["alice", None],
@@ -14,9 +14,9 @@ def test_impute_dataframe():
         [None, 13],
     ]
 
-    df_input = pd.DataFrame(input_data, columns=["Name", "Age"])
+    df = pd.DataFrame(data, columns=["Name", "Age"])
 
-    output_data_expected = [
+    imputed_data_expected = [
         ["alice", 20],
         ["alice", 25],
         ["alice", 30],
@@ -25,14 +25,9 @@ def test_impute_dataframe():
         ["alice", 13],
     ]
 
-    df_output_expected = pd.DataFrame(output_data_expected, columns=["Name", "Age"])
-    df_output_expected["Age"] = df_output_expected["Age"].astype(np.float64)
+    df_imputed_expected = pd.DataFrame(imputed_data_expected, columns=["Name", "Age"])
+    df_imputed_expected["Age"] = df_imputed_expected["Age"].astype(np.float64)
 
-    df_output_actual = pandas_dataframe_operations.impute_dataframe(
-        df_input, random_state=0
-    )
+    df_imputed_actual = pandas_dataframe_operations.impute_dataframe(df, random_state=0)
 
-    print(df_output_actual.dtypes)
-    print(df_output_expected.dtypes)
-
-    pd.testing.assert_frame_equal(df_output_expected, df_output_actual)
+    pd.testing.assert_frame_equal(df_imputed_expected, df_imputed_actual)

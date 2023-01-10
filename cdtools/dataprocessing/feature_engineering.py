@@ -4,7 +4,9 @@ from sklearn import preprocessing
 from typing import Tuple, Union
 
 
-def encode_labels(column: Union[list, np.ndarray, pd.Series]) -> np.ndarray:
+def encode_labels(
+    column: Union[list, np.ndarray, pd.Series],
+) -> Tuple[np.ndarray, np.ndarray]:
 
     """
     Convert labels/words in a given column into numeric form.
@@ -15,7 +17,10 @@ def encode_labels(column: Union[list, np.ndarray, pd.Series]) -> np.ndarray:
 
     Outputs:
     label_encoded_column: np.ndarray
-        Column with all the labels/words in the original column into numeric form.
+        Numpy array with all the labels/words in the original column into numeric form.
+    label_encoded_classes: np.ndarray
+        Numpy array with the distinct labels/words in the original column in
+        alphabetical order.
 
     Example:
     Given three columns, column_1, column_2, and column_3, convert the labels/words of
@@ -25,23 +30,29 @@ def encode_labels(column: Union[list, np.ndarray, pd.Series]) -> np.ndarray:
     column_2 = [True, False]
     column_3 = ["Noot", "Mies", "Aap"]
 
-    label_encoded_column_1 = encode_labels(column_1)
-    label_encoded_column_2 = encode_labels(column_2)
-    label_encoded_column_3 = encode_labels(column_3)
+    label_encoded_column_1, label_encoded_classes_1 = encode_labels(column_1)
+    label_encoded_column_2, label_encoded_classes_2 = encode_labels(column_2)
+    label_encoded_column_3, label_encoded_classes_3 = encode_labels(column_3)
 
     The above example generates the following output:
 
     label_encoded_column_1 = [1, 0]
+    label_encoded_classes_1 = ["Female", "Male"]
     label_encoded_column_2 = [1, 0]
+    label_encoded_classes_2 = [False, True]
     label_encoded_column_3 = [2, 1, 0]
+    label_encoded_classes_3 = ["Aap", "Mies", "Noot"]
 
     Note that words are labeled (numbered) in alphabetical order of these words. The
     boolean values True and False are labeled as 1 and 0 respectively.
     """
 
-    label_encoded_column = preprocessing.LabelEncoder().fit_transform(column)
+    label_encoder = preprocessing.LabelEncoder()
+    label_encoder.fit(column)
+    label_encoded_column = label_encoder.transform(column)
+    label_encoded_classes = label_encoder.classes_
 
-    return label_encoded_column
+    return label_encoded_column, label_encoded_classes
 
 
 def get_feature_lists(

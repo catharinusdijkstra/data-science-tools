@@ -1,5 +1,31 @@
-from cdtools.dataprocessing.feature_engineering import get_feature_lists
+from cdtools.dataprocessing.feature_engineering import encode_labels, get_feature_lists
+import numpy as np
 import unittest
+
+
+def test_encode_labels():
+
+    column_1 = np.array(["Male", "Female"])
+    column_2 = [True, False]
+    column_3 = ["Noot", "Mies", "Aap"]
+
+    label_encoded_column_1_expected = [1, 0]
+    label_encoded_column_2_expected = [1, 0]
+    label_encoded_column_3_expected = [2, 1, 0]
+
+    label_encoded_column_1_actual = encode_labels(column_1)
+    label_encoded_column_2_actual = encode_labels(column_2)
+    label_encoded_column_3_actual = encode_labels(column_3)
+
+    np.testing.assert_array_equal(
+        label_encoded_column_1_expected, label_encoded_column_1_actual
+    )
+    np.testing.assert_array_equal(
+        label_encoded_column_2_expected, label_encoded_column_2_actual
+    )
+    np.testing.assert_array_equal(
+        label_encoded_column_3_expected, label_encoded_column_3_actual
+    )
 
 
 def test_get_feature_lists():

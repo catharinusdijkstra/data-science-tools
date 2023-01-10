@@ -4,10 +4,5 @@ setup(
     name="data-science-tools",
     version="0.1.0",
     packages=find_packages(),
-    install_requires=[
-        "black",
-        "matplotlib",
-        "pandas",
-        "pytest",
-    ],
+    install_requires=["black", "matplotlib", "pandas", "pytest", "scikit-learn"],
 )

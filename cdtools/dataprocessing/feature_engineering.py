@@ -1,4 +1,47 @@
-from typing import Tuple
+import numpy as np
+import pandas as pd
+from sklearn import preprocessing
+from typing import Tuple, Union
+
+
+def encode_labels(column: Union[list, np.ndarray, pd.Series]) -> np.ndarray:
+
+    """
+    Convert labels/words in a given column into numeric form.
+
+    Inputs:
+    column: list, np.ndarray, pd.Series
+        Column with data to be labeled.
+
+    Outputs:
+    label_encoded_column: np.ndarray
+        Column with all the labels/words in the original column into numeric form.
+
+    Example:
+    Given three columns, column_1, column_2, and column_3, convert the labels/words of
+    these columns into numeric form:
+
+    column_1 = np.array(["Male", "Female"])
+    column_2 = [True, False]
+    column_3 = ["Noot", "Mies", "Aap"]
+
+    label_encoded_column_1 = encode_labels(column_1)
+    label_encoded_column_2 = encode_labels(column_2)
+    label_encoded_column_3 = encode_labels(column_3)
+
+    The above example generates the following output:
+
+    label_encoded_column_1 = [1, 0]
+    label_encoded_column_2 = [1, 0]
+    label_encoded_column_3 = [2, 1, 0]
+
+    Note that words are labeled (numbered) in alphabetical order of these words. The
+    boolean values True and False are labeled as 1 and 0 respectively.
+    """
+
+    label_encoded_column = preprocessing.LabelEncoder().fit_transform(column)
+
+    return label_encoded_column
 
 
 def get_feature_lists(

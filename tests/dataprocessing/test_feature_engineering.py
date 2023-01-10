@@ -10,21 +10,39 @@ def test_encode_labels():
     column_3 = ["Noot", "Mies", "Aap"]
 
     label_encoded_column_1_expected = [1, 0]
+    label_encoded_classes_1_expected = ["Female", "Male"]
     label_encoded_column_2_expected = [1, 0]
+    label_encoded_classes_2_expected = [False, True]
     label_encoded_column_3_expected = [2, 1, 0]
+    label_encoded_classes_3_expected = ["Aap", "Mies", "Noot"]
 
-    label_encoded_column_1_actual = encode_labels(column_1)
-    label_encoded_column_2_actual = encode_labels(column_2)
-    label_encoded_column_3_actual = encode_labels(column_3)
+    label_encoded_column_1_actual, label_encoded_classes_1_actual = encode_labels(
+        column_1
+    )
+    label_encoded_column_2_actual, label_encoded_classes_2_actual = encode_labels(
+        column_2
+    )
+    label_encoded_column_3_actual, label_encoded_classes_3_actual = encode_labels(
+        column_3
+    )
 
     np.testing.assert_array_equal(
         label_encoded_column_1_expected, label_encoded_column_1_actual
     )
     np.testing.assert_array_equal(
+        label_encoded_classes_1_expected, label_encoded_classes_1_actual
+    )
+    np.testing.assert_array_equal(
         label_encoded_column_2_expected, label_encoded_column_2_actual
     )
     np.testing.assert_array_equal(
+        label_encoded_classes_2_expected, label_encoded_classes_2_actual
+    )
+    np.testing.assert_array_equal(
         label_encoded_column_3_expected, label_encoded_column_3_actual
+    )
+    np.testing.assert_array_equal(
+        label_encoded_classes_3_expected, label_encoded_classes_3_actual
     )
 
 

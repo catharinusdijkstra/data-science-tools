@@ -3,13 +3,18 @@
 ####################
 
 # General purpose
-import joblib  # Import this library before sklearn in order to avoid the following warning "DeprecationWarning: sklearn.externals.joblib is deprecated in 0.21 and will be removed in 0.23. Please import this functionality directly from joblib, which can be installed with: pip install joblib."
+# import joblib  # Import this library before sklearn in order to avoid the following warning "DeprecationWarning: sklearn.externals.joblib is deprecated in 0.21 and will be removed in 0.23. Please import this functionality directly from joblib, which can be installed with: pip install joblib."
 import matplotlib.pyplot as plt
 import numpy as np
-import openpyxl
+
+# import openpyxl
 import pandas as pd
 import seaborn as sns
-from pprint import pprint
+
+# from pprint import pprint
+
+# cdtools
+from cdtools.dataprocessing.feature_engineering import encode_labels, get_feature_lists
 
 # Imbalanced data
 from imblearn.over_sampling import SMOTE
@@ -136,49 +141,68 @@ class CDML_Object(object):
 # Dependencies: None
 #
 class CDML:
-
-    #############################
-    # 1) Initialize CDML object #
-    #############################
-    # def __init__(self,dataframe,keys,features,features_categorical,label,features_categorical_classes_2_drop=['','']):
-    # def __init__(self,dataframe,keys,features,label,features_categorical,features_categorical_classes_2_drop=['','']):
     def __init__(
         self,
         dataframe,
+        column_data_types,
         keys,
-        features,
-        label,
-        features_categorical=[],
+        labels,
         features_categorical_classes_2_drop=[],
     ):
 
         self.data = CDML_Object()
-
-        # #############################
-        # 1a) Store basic information #
-        ###############################
-        self.data.df = dataframe.copy(deep=True)
-        self.data.keys = keys
-        self.data.features = features
-        self.data.label = [label]
-        self.data.features_categorical = features_categorical
-        self.data.features_categorical_classes_2_drop = (
-            features_categorical_classes_2_drop
+        self.store_basic_information(
+            dataframe,
+            column_data_types,
+            keys,
+            labels,
+            features_categorical_classes_2_drop,
         )
+        self.preprocess_categorical_features()
+        self.label_encode_labels()
 
-        ############################
-        # 1b) Categorical features #
-        ############################
+    def define_column_transformer(self):
 
-        # When there are categorical features, initialize and fill all relevant variables.
+        #############################
+        # Define column transformer #
+        #############################
+
+        # Create a column transformer that can be used for one-hot-encoding later. See:
+        # https://jorisvandenbossche.github.io/blog/2018/05/28/scikit-learn-columntransformer/
+        # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
+        # https://datascience.stackexchange.com/questions/41113/deprecationwarning-the-categorical-features-keyword-is-deprecated-in-version
+        if "" not in self.data.features_categorical_classes_2_drop:
+            self.data.ColumnTransformer = ColumnTransformer(
+                [
+                    (
+                        "one_hot_encoder",
+                        preprocessing.OneHotEncoder(
+                            drop=self.data.features_categorical_classes_2_drop
+                        ),
+                        self.data.features_categorical_idx,
+                    )
+                ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
+                remainder="passthrough",  # Leave the rest of the columns untouched
+            )
+        else:
+            self.data.ColumnTransformer = ColumnTransformer(
+                [
+                    (
+                        "one_hot_encoder",
+                        preprocessing.OneHotEncoder(drop=None),
+                        self.data.features_categorical_idx,
+                    )
+                ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
+                remainder="passthrough",  # Leave the rest of the columns untouched
+            )
+
+    def determine_dummy_columns_to_drop(self):
+
+        # Determine which dummy columns can be dropped
         if (self.data.features_categorical != []) and (
             self.data.features_categorical_classes_2_drop != []
         ):
 
-            self.data.features_categorical_dummy_2_drop = []
-            self.data.features_categorical_idx = []
-
-            # Determine which dummy columns can be dropped
             for i in range(0, len(self.data.features_categorical)):
                 if self.data.features_categorical_classes_2_drop[i] != "":
                     self.data.features_categorical_dummy_2_drop = (
@@ -194,35 +218,127 @@ class CDML:
                         self.data.features_categorical_dummy_2_drop + [""]
                     )
 
-            # Determine the index of the categorical features in the feature list
+        else:
+
+            self.data.features_categorical_dummy_2_drop = []
+
+    def determine_index_categorical_features_in_feature_list(self):
+
+        # Determine the index of the categorical features in the feature list
+        if (self.data.features_categorical != []) and (
+            self.data.features_categorical_classes_2_drop != []
+        ):
+
             for i in range(0, len(self.data.features_categorical)):
+
                 self.data.features_categorical_idx = (
                     self.data.features_categorical_idx
                     + [
-                        self.data.df[self.data.features_categorical].columns.get_loc(
+                        self.data.df[self.data.features].columns.get_loc(
                             self.data.features_categorical[i]
                         )
                     ]
                 )
 
-            # ##########################################################################
-            # 1b1) Label encode the categorical features and add them to the dataframe #
-            ############################################################################
+        else:
 
-            # Get the features as numpy.ndarray
-            self.data.df_features_categorical = self.data.df.copy(deep=True)
-            self.data.df_features_categorical = self.data.df_features_categorical[
-                self.data.features_categorical
-            ]
-            self.data.np_features_categorical = self.data.df_features_categorical.values
-            self.data.np_features_categorical_original = (
-                self.data.df_features_categorical.values
+            self.data.features_categorical_idx = []
+
+    def get_categorical_features_as_numpy_array(self):
+
+        # Get the categorical features as numpy.ndarray
+        self.data.df_features_categorical = self.data.df.copy(deep=True)
+        self.data.df_features_categorical = self.data.df_features_categorical[
+            self.data.features_categorical
+        ]
+        self.data.np_features_categorical = self.data.df_features_categorical.values
+        self.data.np_features_categorical_original = (
+            self.data.df_features_categorical.values
+        )
+
+    def include_dummy_variables(self):
+
+        # ###################################################################
+        # Add dummy variables for the categorical features to the dataframe #
+        #####################################################################
+
+        # Loop over the categorical features and create dummy variables for each of them
+        for i in self.data.features_categorical:
+            self.data.df = pd.concat(
+                [
+                    self.data.df,
+                    pd.get_dummies(
+                        self.data.df[i],
+                        columns=[i],
+                        prefix=i,
+                        prefix_sep=" ",
+                        drop_first=False,
+                    ),
+                ],
+                axis=1,
             )
 
-            # Label encode the categorical features and store the original unique values for each of these features
-            self.data.features_categorical_distinct_values = {}
-            self.data.features_categorical_classes_2_drop_le = []
-            for feature_index in self.data.features_categorical_idx:
+        # Create a list with the names of the dummy variables
+        self.data.features_categorical_dummy = [
+            x
+            for x in self.data.df.columns
+            if x
+            not in self.data.keys
+            + self.data.features
+            + self.data.features_categorical_le
+            + self.data.labels
+        ]
+
+        # Create a list with the names of the dummy categorical features and the numerical features in the order of the original list of features.
+        flag = 0
+        self.data.features_dummy = []
+        for i in range(0, len(self.data.features)):
+
+            # Check which features are contained in the list of categorical features for
+            # which dummy variables were created. For details, see
+            # https://stackoverflow.com/questions/16380326/check-if-substring-is-in-a-list-of-strings
+            result = [
+                self.data.features[i] in word
+                for word in self.data.features_categorical_dummy
+            ]
+
+            for j in range(0, len(result)):
+                if result[j] == True:
+                    self.data.features_dummy = self.data.features_dummy + [
+                        self.data.features_categorical_dummy[j]
+                    ]
+                    flag = 1
+
+            if flag == 0:
+                self.data.features_dummy = self.data.features_dummy + [
+                    self.data.features[i]
+                ]
+
+            flag = 0
+
+        self.data.features_dummy = [
+            x
+            for x in self.data.features_dummy
+            if x not in self.data.features_categorical_dummy_2_drop
+        ]  # Remove surplus dummy columns from the list
+
+    def label_encode_categorical_features(self):
+
+        # ##########################################################################
+        # 1b1) Label encode the categorical features and add them to the dataframe #
+        ############################################################################
+        self.get_categorical_features_as_numpy_array()
+
+        # Label encode the categorical features and store the original unique values for each of these features
+        self.data.features_categorical_distinct_values = {}
+        self.data.features_categorical_classes_2_drop_le = []
+
+        # When there are categorical features, initialize and fill all relevant variables.
+        if (self.data.features_categorical != []) and (
+            self.data.features_categorical_classes_2_drop != []
+        ):
+
+            for feature_index in range(0, len(self.data.features_categorical_idx)):
                 le = preprocessing.LabelEncoder()
                 le.fit(self.data.np_features_categorical[:, feature_index])
                 self.data.np_features_categorical[:, feature_index] = le.transform(
@@ -247,303 +363,76 @@ class CDML:
                         self.data.features_categorical_classes_2_drop_le + [""]
                     )
 
-            # Convert the numpy array to dataframe (https://stackoverflow.com/questions/20763012/creating-a-pandas-dataframe-from-a-numpy-array-how-do-i-specify-the-index-colum)
-            self.data.df_features_categorical_le = pd.DataFrame(
-                data=self.data.np_features_categorical,  # values
-                index=self.data.df_features_categorical.index,  # index
-                columns=self.data.df_features_categorical.columns + "_le",
-            )  # column names
-            self.data.features_categorical_le = (
-                self.data.df_features_categorical_le.columns.tolist()
-            )
+        # Convert the numpy array to dataframe (https://stackoverflow.com/questions/20763012/creating-a-pandas-dataframe-from-a-numpy-array-how-do-i-specify-the-index-colum)
+        self.data.df_features_categorical_le = pd.DataFrame(
+            data=self.data.np_features_categorical,  # values
+            index=self.data.df_features_categorical.index,  # index
+            columns=self.data.df_features_categorical.columns + "_le",
+        )  # column names
 
-            # Add label encoded categorical features to the dataframe
-            self.data.df = self.data.df.merge(
-                self.data.df_features_categorical_le, left_index=True, right_index=True
-            )
+        self.data.features_categorical_le = (
+            self.data.df_features_categorical_le.columns.tolist()
+        )
 
-            # Create a list with the names of the label encoded categorical features and the numerical features in the order of the original list of features.
-            self.data.features_le = []
-            for i in range(0, len(features)):
-                if features[i] + "_le" in self.data.features_categorical_le:
-                    self.data.features_le = self.data.features_le + [
-                        features[i] + "_le"
-                    ]
-                else:
-                    self.data.features_le = self.data.features_le + [features[i]]
+        # Add label encoded categorical features to the dataframe
+        self.data.df = self.data.df.merge(
+            self.data.df_features_categorical_le, left_index=True, right_index=True
+        )
 
-            ##################################
-            # 1b2) Define column transformer #
-            ##################################
-
-            # Create a column transformer that can be used for one-hot-encoding later. See:
-            # https://jorisvandenbossche.github.io/blog/2018/05/28/scikit-learn-columntransformer/
-            # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
-            # https://datascience.stackexchange.com/questions/41113/deprecationwarning-the-categorical-features-keyword-is-deprecated-in-version
-            if "" not in self.data.features_categorical_classes_2_drop:
-                self.data.ColumnTransformer = ColumnTransformer(
-                    [
-                        (
-                            "one_hot_encoder",
-                            preprocessing.OneHotEncoder(
-                                drop=self.data.features_categorical_classes_2_drop
-                            ),
-                            self.data.features_categorical_idx,
-                        )
-                    ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
-                    remainder="passthrough",  # Leave the rest of the columns untouched
-                )
-            else:
-                self.data.ColumnTransformer = ColumnTransformer(
-                    [
-                        (
-                            "one_hot_encoder",
-                            preprocessing.OneHotEncoder(drop=None),
-                            self.data.features_categorical_idx,
-                        )
-                    ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
-                    remainder="passthrough",  # Leave the rest of the columns untouched
-                )
-
-            # ########################################################################
-            # 1b3) Add dummy variables for the categorical features to the dataframe #
-            ##########################################################################
-
-            # Loop over the categorical features and create dummy variables for each of them
-            for i in self.data.features_categorical:
-                self.data.df = pd.concat(
-                    [
-                        self.data.df,
-                        pd.get_dummies(
-                            self.data.df[i],
-                            columns=[i],
-                            prefix=i,
-                            prefix_sep=" ",
-                            drop_first=False,
-                        ),
-                    ],
-                    axis=1,
-                )
-
-            # Create a list with the names of the dummy variables
-            self.data.features_categorical_dummy = [
-                x
-                for x in self.data.df.columns
-                if x
-                not in self.data.keys
-                + self.data.features
-                + self.data.features_categorical_le
-                + [self.data.label[0]]
-            ]
-
-            # Create a list with the names of the dummy categorical features and the numerical features in the order of the original list of features.
-            flag = 0
-            self.data.features_dummy = []
-            for i in range(0, len(self.data.features)):
-
-                # Check which features are contained in the list of categorical features for
-                # which dummy variables were created. For details, see
-                # https://stackoverflow.com/questions/16380326/check-if-substring-is-in-a-list-of-strings
-                result = [
-                    self.data.features[i] in word
-                    for word in self.data.features_categorical_dummy
+        # Create a list with the names of the label encoded categorical features and the numerical features in the order of the original list of features.
+        self.data.features_le = []
+        for i in range(0, len(self.data.features)):
+            if self.data.features[i] + "_le" in self.data.features_categorical_le:
+                self.data.features_le = self.data.features_le + [
+                    self.data.features[i] + "_le"
                 ]
-
-                for j in range(0, len(result)):
-                    if result[j] == True:
-                        self.data.features_dummy = self.data.features_dummy + [
-                            self.data.features_categorical_dummy[j]
-                        ]
-                        flag = 1
-
-                if flag == 0:
-                    self.data.features_dummy = self.data.features_dummy + [
-                        self.data.features[i]
-                    ]
-
-                flag = 0
-
-            self.data.features_dummy = [
-                x
-                for x in self.data.features_dummy
-                if x not in self.data.features_categorical_dummy_2_drop
-            ]  # Remove surplus dummy columns from the list
-
-        # When there are NO categorical features, still initialize all relevant variables, and where possible/applicable fill them.
-        else:
-
-            self.data.features_categorical_dummy_2_drop = []
-            self.data.features_categorical_idx = []
-
-            # Determine which dummy columns can be dropped
-            self.data.features_categorical_dummy_2_drop = []
-
-            # Determine the index of the categorical features in the feature list
-            self.data.features_categorical_idx = []
-
-            # ##########################################################################
-            # 1b1) Label encode the categorical features and add them to the dataframe #
-            ############################################################################
-
-            # Get the features as numpy.ndarray
-            self.data.df_features_categorical = self.data.df.copy(deep=True)
-            self.data.df_features_categorical = self.data.df_features_categorical[
-                self.data.features_categorical
-            ]
-            self.data.np_features_categorical = self.data.df_features_categorical.values
-            self.data.np_features_categorical_original = (
-                self.data.df_features_categorical.values
-            )
-
-            # Label encode the categorical features and store the original unique values for each of these features
-            self.data.features_categorical_distinct_values = {}
-            self.data.features_categorical_classes_2_drop_le = []
-
-            # Convert the numpy array to dataframe (https://stackoverflow.com/questions/20763012/creating-a-pandas-dataframe-from-a-numpy-array-how-do-i-specify-the-index-colum)
-            self.data.df_features_categorical_le = pd.DataFrame(
-                data=self.data.np_features_categorical,  # values
-                index=self.data.df_features_categorical.index,  # index
-                columns=self.data.df_features_categorical.columns + "_le",
-            )  # column names
-            self.data.features_categorical_le = (
-                self.data.df_features_categorical_le.columns.tolist()
-            )
-
-            # Add label encoded categorical features to the dataframe
-            self.data.df = self.data.df.merge(
-                self.data.df_features_categorical_le, left_index=True, right_index=True
-            )
-
-            # Create a list with the names of the label encoded categorical features and the numerical features in the order of the original list of features.
-            self.data.features_le = []
-            for i in range(0, len(features)):
-                if features[i] + "_le" in self.data.features_categorical_le:
-                    self.data.features_le = self.data.features_le + [
-                        features[i] + "_le"
-                    ]
-                else:
-                    self.data.features_le = self.data.features_le + [features[i]]
-
-            ##################################
-            # 1b2) Define column transformer #
-            ##################################
-
-            # Create a column transformer that can be used for one-hot-encoding later. See:
-            # https://jorisvandenbossche.github.io/blog/2018/05/28/scikit-learn-columntransformer/
-            # https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.OneHotEncoder.html
-            # https://datascience.stackexchange.com/questions/41113/deprecationwarning-the-categorical-features-keyword-is-deprecated-in-version
-            if "" not in self.data.features_categorical_classes_2_drop:
-                self.data.ColumnTransformer = ColumnTransformer(
-                    [
-                        (
-                            "one_hot_encoder",
-                            preprocessing.OneHotEncoder(
-                                drop=self.data.features_categorical_classes_2_drop
-                            ),
-                            self.data.features_categorical_idx,
-                        )
-                    ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
-                    remainder="passthrough",  # Leave the rest of the columns untouched
-                )
             else:
-                self.data.ColumnTransformer = ColumnTransformer(
-                    [
-                        (
-                            "one_hot_encoder",
-                            preprocessing.OneHotEncoder(drop=None),
-                            self.data.features_categorical_idx,
-                        )
-                    ],  # Transformers- List of (name, transformer, column(s)) tuples specifying the transformer objects to be applied to subsets of the data and the numbers of the columns to be transformed.
-                    remainder="passthrough",  # Leave the rest of the columns untouched
-                )
+                self.data.features_le = self.data.features_le + [self.data.features[i]]
 
-            # ########################################################################
-            # 1b3) Add dummy variables for the categorical features to the dataframe #
-            ##########################################################################
+    def label_encode_labels(self):
 
-            # Loop over the categorical features and create dummy variables for each of them
-            for i in self.data.features_categorical:
-                self.data.df = pd.concat(
-                    [
-                        self.data.df,
-                        pd.get_dummies(
-                            self.data.df[i],
-                            columns=[i],
-                            prefix=i,
-                            prefix_sep=" ",
-                            drop_first=False,
-                        ),
-                    ],
-                    axis=1,
-                )
-
-            # Create a list with the names of the dummy variables
-            self.data.features_categorical_dummy = [
-                x
-                for x in self.data.df.columns
-                if x
-                not in self.data.keys
-                + self.data.features
-                + self.data.features_categorical_le
-                + [self.data.label[0]]
+        self.data.label_class_names = [None] * len(self.data.labels)
+        for i in range(0, len(self.data.labels)):
+            self.data.labels = self.data.labels + [
+                self.data.labels[i] + "_label_encoded"
             ]
+            (
+                self.data.df[self.data.labels[i] + "_label_encoded"],
+                self.data.label_class_names[i],
+            ) = encode_labels(self.data.df[self.data.labels[i]])
 
-            # Create a list with the names of the dummy categorical features and the numerical features in the order of the original list of features.
-            flag = 0
-            self.data.features_dummy = []
-            for i in range(0, len(self.data.features)):
+    def preprocess_categorical_features(self):
 
-                # Check which features are contained in the list of categorical features for
-                # which dummy variables were created. For details, see
-                # https://stackoverflow.com/questions/16380326/check-if-substring-is-in-a-list-of-strings
-                result = [
-                    self.data.features[i] in word
-                    for word in self.data.features_categorical_dummy
-                ]
+        self.data.features_categorical_dummy_2_drop = []
+        self.data.features_categorical_idx = []
 
-                for j in range(0, len(result)):
-                    if result[j] == True:
-                        self.data.features_dummy = self.data.features_dummy + [
-                            self.data.features_categorical_dummy[j]
-                        ]
-                        flag = 1
+        self.determine_dummy_columns_to_drop()
+        self.determine_index_categorical_features_in_feature_list()
+        self.label_encode_categorical_features()
+        self.define_column_transformer()
+        self.include_dummy_variables()
 
-                if flag == 0:
-                    self.data.features_dummy = self.data.features_dummy + [
-                        self.data.features[i]
-                    ]
+    def store_basic_information(
+        self,
+        dataframe,
+        column_data_types,
+        keys,
+        labels,
+        features_categorical_classes_2_drop,
+    ):
 
-                flag = 0
-
-            self.data.features_dummy = [
-                x
-                for x in self.data.features_dummy
-                if x not in self.data.features_categorical_dummy_2_drop
-            ]  # Remove surplus dummy columns from the list
-
-        ##########################
-        # 1c) Numerical features #
-        ##########################
-        self.data.features_numerical = [
-            x for x in self.data.features if x not in self.data.features_categorical
-        ]
-
-        # ######################
-        # 1d) Encode the label #
-        ########################
-
-        # Encode the label (i.e. target) column, i.e. transform the values to 0 and 1 values
-        label = self.data.df[self.data.label[0]]
-        le = preprocessing.LabelEncoder()
-        le.fit(label)
-        label = le.transform(label)
-
-        # Add the encoded label to the dataframe
-        self.data.label = self.data.label + [self.data.label[0] + "_le"]
-        self.data.df[self.data.label[0] + "_le"] = label
-
-        # Get class names
-        self.data.label_class_names = le.classes_
+        self.data.df = dataframe.copy(deep=True)
+        self.data.keys = keys
+        (
+            self.data.features,
+            self.data.features_categorical,
+            self.data.features_numerical,
+            self.data.features_boolean,
+        ) = get_feature_lists(column_data_types, keys, labels)
+        self.data.labels = labels
+        self.data.features_categorical_classes_2_drop = (
+            features_categorical_classes_2_drop
+        )
 
     ###################################################
     # 2) Split the data in training and test datasets #
@@ -598,9 +487,9 @@ class CDML:
             self.data.df[
                 self.data.features_dummy
             ].values.tolist(),  # Model features (dummy) --> This is the default data to be used, e.g. create X_train etc...
-            self.data.df[self.data.label[0]].values.tolist(),  # Model labels
+            self.data.df[self.data.labels[0]].values.tolist(),  # Model labels
             self.data.df[
-                self.data.label[1]
+                self.data.labels[1]
             ].values.tolist(),  # Model labels (label encoded)
             test_size=self.data_splitted.test_size,  # % of test data of the original data
             random_state=self.data_splitted.random_state,
@@ -643,10 +532,10 @@ class CDML:
 
         # Create dataframes for the training and test datasets
         self.data_splitted.df_train = pd.DataFrame(
-            columns=self.data.keys + self.data.features_dummy + [self.data.label[0]]
+            columns=self.data.keys + self.data.features_dummy + [self.data.labels[0]]
         )
         self.data_splitted.df_test = pd.DataFrame(
-            columns=self.data.keys + self.data.features_dummy + [self.data.label[0]]
+            columns=self.data.keys + self.data.features_dummy + [self.data.labels[0]]
         )
 
         # Fill the dataframes with features
@@ -659,8 +548,8 @@ class CDML:
             ]
 
         # Fill the dataframes with labels
-        self.data_splitted.df_train[self.data.label[0]] = self.data_splitted.y_train
-        self.data_splitted.df_test[self.data.label[0]] = self.data_splitted.y_test
+        self.data_splitted.df_train[self.data.labels[0]] = self.data_splitted.y_train
+        self.data_splitted.df_test[self.data.labels[0]] = self.data_splitted.y_test
 
         if sampling == "SMOTE":
 
@@ -902,12 +791,12 @@ class CDML:
             self.data_splitted.X_train
         )[
             :, 1
-        ]  # Discrete classifier, converteer waarden naar probabilities
+        ]  # Discrete classifier, convert values into probabilities
         self.model.y_probability_test = self.model.algorithm.predict_proba(
             self.data_splitted.X_test
         )[
             :, 1
-        ]  # Discrete classifier, converteer waarden naar probabilities
+        ]  # Discrete classifier, convert values into probabilities
 
         # 6. Calculate the False Positive Rate (FPR) and the True Positive Rate
         (
@@ -1323,13 +1212,13 @@ class CDML:
                 # else:
                 #    plt.plot(self.model.recall_test[i], self.model.precision_test[i], 'bo', markerfacecolor="None", markeredgewidth=1)
         N = (
-            self.data_splitted.df_test.groupby([self.data.label[0]])
-            .agg({self.data.label[0]: "count"})
+            self.data_splitted.df_test.groupby([self.data.labels[0]])
+            .agg({self.data.labels[0]: "count"})
             .values[0]
         )  # Total number of negatives (N) in test dataset
         P = (
-            self.data_splitted.df_test.groupby([self.data.label[0]])
-            .agg({self.data.label[0]: "count"})
+            self.data_splitted.df_test.groupby([self.data.labels[0]])
+            .agg({self.data.labels[0]: "count"})
             .values[1]
         )  # Total number of positives (P) in test dataset
         plt.plot(
@@ -1480,7 +1369,7 @@ class CDML:
             # Initialize result table
             df_result = pd.DataFrame(
                 columns=self.data.keys
-                + [self.data.label[0]]
+                + [self.data.labels[0]]
                 + ["prediction", "bias"]
                 + sorted(columns_value + columns_contribution)
             )
@@ -1496,7 +1385,7 @@ class CDML:
                 ]
 
             # Fill label column
-            df_result[self.data.label[0]] = self.data_splitted.y_test
+            df_result[self.data.labels[0]] = self.data_splitted.y_test
 
             # Fill prediction and mean columns
             df_result["prediction"] = prediction[
@@ -1517,7 +1406,9 @@ class CDML:
                 columns = df_result.columns
             else:
                 print("Note: Model features are sorted by importance for the model!")
-                columns = self.data.keys + [self.data.label[0]] + ["prediction", "bias"]
+                columns = (
+                    self.data.keys + [self.data.labels[0]] + ["prediction", "bias"]
+                )
 
                 for i in range(0, len(columns_feature_importance)):
                     columns = (
@@ -1567,12 +1458,12 @@ class CDML:
         # 'bias', or the name of the target (label)
         df_T_features = df_T[
             (~df_T["Entity"].str.contains("\(contribution\)"))
-            & (~df_T["Entity"].isin(["prediction", "bias"] + [self.data.label[0]]))
+            & (~df_T["Entity"].isin(["prediction", "bias"] + [self.data.labels[0]]))
         ]
         df_T_features = df_T_features.rename(columns={"Value": "Feature"})
 
         # Extract the label from the interpretation table
-        df_T_label = df_T[df_T["Entity"].isin([self.data.label[0]])]
+        df_T_label = df_T[df_T["Entity"].isin([self.data.labels[0]])]
         df_T_label = df_T_label.rename(columns={"Value": "Label"})
 
         # Extract the variable contribution and bias from the interpretation table.
@@ -1682,7 +1573,7 @@ class CDML:
         # Initialize result table
         df_result = pd.DataFrame(
             columns=self.data.keys
-            + [self.data.label[0]]
+            + [self.data.labels[0]]
             + ["prediction", "intercept"]
             + sorted(columns_value + columns_contribution + columns_decision)
         )
@@ -1694,7 +1585,7 @@ class CDML:
             ]
 
         # Fill label column
-        df_result[self.data.label[0]] = self.data_splitted.y_test
+        df_result[self.data.labels[0]] = self.data_splitted.y_test
 
         # Fill the value, contribution and decision columns
 
@@ -1721,13 +1612,19 @@ class CDML:
                 df_x = df_x.astype({j + "_le": int})
 
             # Inverse transform the label encoded values back to their original values.
-            for feature_index in self.data.features_categorical_idx:
+            for feature_index in range(0, len(self.data.features_categorical_idx)):
                 le = preprocessing.LabelEncoder()
                 le.fit(self.data.np_features_categorical_original[:, feature_index])
                 df_x[
                     self.data.features_categorical[feature_index]
                 ] = le.inverse_transform(
-                    df_x.iloc[:, feature_index : feature_index + 1].values.ravel()
+                    df_x.iloc[
+                        :,
+                        self.data.features_categorical_idx[
+                            feature_index
+                        ] : self.data.features_categorical_idx[feature_index]
+                        + 1,
+                    ].values.ravel()
                 )
 
             # Only select the columns with the original feature names
@@ -1852,12 +1749,16 @@ class CDML:
         df_T_features = df_T[
             (~df_T["Entity"].str.contains("\(contribution\)"))
             & (~df_T["Entity"].str.contains("\(decision\)"))
-            & (~df_T["Entity"].isin(["prediction", "intercept"] + [self.data.label[0]]))
+            & (
+                ~df_T["Entity"].isin(
+                    ["prediction", "intercept"] + [self.data.labels[0]]
+                )
+            )
         ]
         df_T_features = df_T_features.rename(columns={"Value": "Feature"})
 
         # Extract the label from the interpretation table
-        df_T_label = df_T[df_T["Entity"].isin([self.data.label[0]])]
+        df_T_label = df_T[df_T["Entity"].isin([self.data.labels[0]])]
         df_T_label = df_T_label.rename(columns={"Value": "Label"})
 
         # Extract the variable contribution and intercept from the interpretation table.
@@ -1963,7 +1864,6 @@ class CDML:
     # Source: https://www.scikit-yb.org/en/latest/api/model_selection/learning_curve.html
     def show_learning_curve(
         self,
-        title=None,
         ylim=None,
         cv=None,
         n_jobs=None,
@@ -1982,8 +1882,7 @@ class CDML:
         else:
             X = self.data.df[self.data.features_dummy].values.tolist()
 
-        # y = self.data.df[self.data.label[0]].values[:,0].tolist()
-        y = self.data.df[self.data.label[0]].values.tolist()
+        y = self.data.df[self.data.labels[0]].values.tolist()
 
         if ylim is not None:
             plt.ylim(*ylim)
@@ -2267,128 +2166,6 @@ def df_balance(df, label, random_state=0):
     df2.sort_index(inplace=True)
 
     return df2
-
-
-# Function: df_compare
-#
-# Source:
-#
-# Purpose: Compare two dataframes
-#
-# Syntax: result = df_compare(df1,df2)
-#
-# Inputs: df1 = first dataframe
-#         df2 = second dataframe
-#
-# Outputs: result = dataframe with differences between the
-#                   two input dataframes. For each record
-#                   that is different, first the records from
-#                   the first dataframe is shown, followed by
-#                   the records from the second dataframe
-#
-# Example: Compare dataframe df1 with dataframe df2 and store
-#          the results in a dataframe called df_comparison:
-#
-#          df_comparison = df_compare(df1,df2)
-#
-# Dependencies: None
-#
-def df_compare(df1, df2):
-
-    # Concatenate the dataframes
-    df = pd.concat([df1, df2])
-    df = df.reset_index(drop=True)
-
-    # Group by
-    df_gpby = df.groupby(list(df.columns))
-
-    # Get index of unique records
-    idx = [x[0] for x in df_gpby.groups.values() if len(x) == 1]
-
-    df_differences = df.reindex(idx)
-    df_differences = df_differences.reset_index(drop=True)
-
-    return df_differences
-
-
-# Function: df_impute
-#
-# Source:
-#
-# Purpose: Impute missing values in a dataframe. For each missing
-#          value in a given column a random value is chosen from the
-#          non-missing values in that column, where the randomly
-#          drawn value then replaces the missing value.
-#
-# Syntax: result = df_impute(df)
-#
-# Inputs: df = dataframe containing missing values
-#
-# Outputs: result = dataframe with missing values imputed
-#
-# Example: Impute the dataframe df containing missing values
-#          and store the results in a dataframe called df2.
-#
-#          df2 = df_impute(df)
-#
-# Dependencies: None
-#
-def df_impute(df):
-
-    # Make a copy of the original dataframe
-    df_out = df.copy(deep=True)
-
-    # Loop over all columns in the dataframe
-    for i in range(0, len(df.columns)):
-
-        # Get the name of the current column
-        current_column_name = df.columns[i]
-
-        # Get the current column as a dataframe
-        df_current_column = pd.DataFrame(df[current_column_name].copy(deep=True))
-
-        # Initialize a dataframe that will contain the column with imputed values
-        df_current_column_imputed = df_current_column.copy()
-
-        # Check if the current column contains missing values. If so, start processing this column
-        if df_current_column.isnull().sum()[0] > 0:
-
-            # Get a dataframe with missing values only, based
-            # on column type. When dtype == 'object' the column
-            # contains text, otherwise is contains numbers
-            if df_current_column[current_column_name].dtype == "object":
-                df_missing_values = df_current_column[
-                    pd.isnull(df_current_column[current_column_name])
-                ]
-            else:
-                df_missing_values = df_current_column[
-                    np.isnan(df_current_column[current_column_name])
-                ]
-
-            # Loop over the records in the dataframe with missing values
-            for j in range(0, df_missing_values.shape[0]):
-
-                # Draw a random sample from the non-missing elements in the column
-                random_sample_non_missing_data = (
-                    df_current_column.dropna().sample(n=1).values[0][0]
-                )
-
-                # Get the row index of the current missing value that needs to be imputed
-                row_index = df_missing_values[current_column_name].index[j]
-
-                # Assign the random sample value to the current missing value in the column
-                df_current_column_imputed.loc[
-                    row_index, :
-                ] = random_sample_non_missing_data
-
-        # Update the output dataframe with the imputed values
-        df_out[current_column_name] = np.where(
-            df[current_column_name].isnull(),
-            df_current_column_imputed[df_current_column_imputed.columns[0]],
-            df[current_column_name],
-        )
-
-    return df_out
 
 
 # Function: df_subset_remove

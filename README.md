@@ -40,7 +40,7 @@ pip install -r requirements.txt
 ## Setup the Python environment data-science-tools locally (optional)
 
 In order to setup the Python environment data-science-tools locally, run the following
-commands from the root folder of this repository
+commands from the root folder of this repository:
 
 ```
 conda env update --file environment.yml

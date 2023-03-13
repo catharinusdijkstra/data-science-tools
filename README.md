@@ -31,7 +31,7 @@ pip install git+https://github.com/catharinusdijkstra/data-science-tools.git
 The second way is to create a new **requirements.txt** file and include the line
 
 ```
-git+<https://github.com/catharinusdijkstra/data-science-tools.git>
+git+https://github.com/catharinusdijkstra/data-science-tools.git
 ```
 
 , or if you already have a requirements.txt file with any other packages you want to
